@@ -493,7 +493,7 @@ void *TrainModelThread(void *id) {
         }
       }
     } else {  //train skip-gram
-      for (a = b; a < window * 2 + 1 + sentence_vectors - b; a++) if (a != window) {
+      for  (a = b; a < window * 2 + 1 + sentence_vectors - b; a++) if (a != window) {
         c = sentence_position - window + a;
         if (sentence_vectors) if (a >= window * 2 + sentence_vectors - b) c = 0;
         if (c < 0) continue;
@@ -578,6 +578,53 @@ void TrainModel() {
       if (binary) for (b = 0; b < layer1_size; b++) fwrite(&syn0[a * layer1_size + b], sizeof(real), 1, fo);
       else for (b = 0; b < layer1_size; b++) fprintf(fo, "%lf ", syn0[a * layer1_size + b]);
       fprintf(fo, "\n");
+    }
+    // Save logs for continuing training
+    FILE *fsyn1;
+    char output_syn1[MAX_STRING + 4];
+    strcpy(output_syn1, output_file);
+    strcat(output_syn1, ".syn1");
+    fsyn1 = fopen(output_syn1, "wb");
+    // Write continuous bag of words
+    fprintf(fsyn1, "cbow %d ", cbow);
+    fprintf(fsyn1, "hs %d ", hs);
+    fprintf(fsyn1, "neg %d ", negative);
+    fprintf(fsyn1, "window %d ", window);
+    fprintf(fsyn1, "layer1_size %lld ", layer1_size);
+    fprintf(fsyn1, "epochs %lld ", iter);
+
+    // Save hidden layer
+    if(hs){
+        long long  n = sizeof(syn1); // / (sizeof(real) * layer1_size);
+        fprintf(fsyn1, "syn1_size %lld\n", vocab_size);
+        for (a = 0; a < vocab_size; a++) {
+            fprintf(fsyn1, "%ld ", a);
+            for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1[a * layer1_size + b]);
+            fprintf(fsyn1, "\n");
+        }
+        fclose(fsyn1);
+
+        FILE *fvocab;
+        char output_vocab[MAX_STRING];
+        strcpy(output_vocab, output_file);
+        strcat(output_vocab, ".vocab");
+        fvocab = fopen(output_vocab, "wb");
+        for (a = 0; a < vocab_size; a++){
+            fprintf(fvocab, "%s %d ", vocab[a].word, vocab[a].codelen);
+            for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].point[b]);
+            for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].code[b]);
+            fprintf(fvocab, "\n");
+        }
+        fclose(fvocab);
+
+    } else {
+        fprintf(fsyn1, "syn1_size %lld\n", vocab_size);
+        for (a = 0; a < vocab_size; a++){
+            fprintf(fsyn1, "%s ", vocab[a].word);
+            for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1neg[a * layer1_size + b]);
+            fprintf(fsyn1, "\n");
+        }
+        fclose(fsyn1);
     }
   } else {
     // Run K-means on the word vectors
