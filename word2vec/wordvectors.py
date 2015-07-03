@@ -123,7 +123,7 @@ class WordVectors(object):
                                 f = 0
                                 l2 = self.train['vocab'][word]['point'][d]
                                 #f += 1. / (1 - np.exp( np.dot(self.get_vector(last_word), self.train['syn1'][l2])))
-                                f += 1. / (1 - np.exp( np.dot(newvec, self.train['syn1'][l2])))
+                                f += 1. / (1 - np.exp( np.clip(np.dot(newvec, self.train['syn1'][l2]), -3., 3.)))
                                 g = (1 - self.train['vocab'][word]['code'][d] - f) * alpha
                                 neu1e += g * self.train['syn1'][l2]
                         else:
