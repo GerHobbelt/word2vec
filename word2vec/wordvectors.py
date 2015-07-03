@@ -91,7 +91,7 @@ class WordVectors(object):
                                 g = (1 - self.train['vocab'][word]['code'][d]) * alpha
                                 neu1e += g * self.train['syn1'][l2]
                         else:
-                            for d in xrange(max([3, self.train['negative']]) + 1):
+                            for d in xrange(max([3, self.train['neg']]) + 1):
                                 if d == 0:
                                     target = word
                                     label = 1
@@ -127,7 +127,7 @@ class WordVectors(object):
                                 g = (1 - self.train['vocab'][word]['code'][d] - f) * alpha
                                 neu1e += g * self.train['syn1'][l2]
                         else:
-                            for d in xrange(max([3, self.train['negative']]) + 1):
+                            for d in xrange(max([3, self.train['neg']]) + 1):
                                 if d == 0:
                                     target = word
                                     label = 1
