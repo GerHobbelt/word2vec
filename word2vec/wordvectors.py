@@ -87,7 +87,7 @@ class WordVectors(object):
                             for d in xrange(self.train["vocab"][word]["codelen"]):
                                 f = 0
                                 l2 = self.train["vocab"][word]["point"][d]
-                                f = 1. / (1 + exp(np.dot(neu1, self.train['syn1'][l2])))
+                                f = 1. / (1 + exp(np.clip(np.dot(neu1, self.train['syn1'][l2]),-3., 3.)))
                                 g = (1 - self.train['vocab'][word]['code'][d]) * alpha
                                 neu1e += g * self.train['syn1'][l2]
                         else:
@@ -102,7 +102,7 @@ class WordVectors(object):
                                 
                                 l2 = target #self.ix[target]
                                 f = 0
-                                f = np.dot(neu1, self.train["syn1"][l2])
+                                f = np.clip(np.dot(neu1, self.train["syn1"][l2]),-3., 3.)
                                 g = (label - 1. / (1 + np.exp(f))) * alpha
                                 neu1e += g * self.train["syn1"][l2]
                         
@@ -139,7 +139,7 @@ class WordVectors(object):
                                 l2 = target
                                 f = 0
                                 #f = 1. /(1. + np.exp(np.dot(self.get_vocab(last_word), self.train['syn1'][l2])))
-                                f = 1. /(1. + np.exp(np.dot(newvec, self.train['syn1'][l2])))
+                                f = 1. /(1. + np.exp(np.clip(np.dot(newvec, self.train['syn1'][l2])), -3., 3.))
                                 g = (label - f) * alpha
                                 neu1e += g * self.train['syn1'][l2]
                             
