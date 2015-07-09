@@ -118,53 +118,53 @@ class WordVectors(object):
 
                         curr_sum += grad_sum / gc
                         curr_c += 1
-                else:
-                    for a in xrange(0, window * 2 + 1):
-                        c = sentence_position - window + a
-                        if (a >= window * 2 + 1 - b): c =0
-                        if c < 0: continue
-                        if c >= sentence_len: continue
-                        last_word =  word_list[c]
-                        l1 = last_word 
-                        neu1e = np.zeros(layer1_size)
-                        grad_sum = 0
-                        gc = 0
-                        if self.train['hs']:
-                            for d in xrange(self.train['vocab'][word]['codelen']):
-                                f = 0
-                                l2 = self.train['vocab'][word]['point'][d]
-                                f += 1. / (1 - np.exp( np.dot(self.get_vector(last_word), self.train['syn1'][l2])))
-                                g = (1 - self.train['vocab'][word]['code'][d] - f)
-                                grad_sum += abs(g)
-                                gc += 1
+            else:
+                for a in xrange(0, window * 2 + 1):
+                    c = sentence_position - window + a
+                    if (a >= window * 2 + 1 - b): c =0
+                    if c < 0: continue
+                    if c >= sentence_len: continue
+                    last_word =  word_list[c]
+                    l1 = last_word 
+                    neu1e = np.zeros(layer1_size)
+                    grad_sum = 0
+                    gc = 0
+                    if self.train['hs']:
+                        for d in xrange(self.train['vocab'][word]['codelen']):
+                            f = 0
+                            l2 = self.train['vocab'][word]['point'][d]
+                            f += 1. / (1 - np.exp( np.dot(self.get_vector(last_word), self.train['syn1'][l2])))
+                            g = (1 - self.train['vocab'][word]['code'][d] - f)
+                            grad_sum += abs(g)
+                            gc += 1
 
-                            curr_sum += grad_sum / gc
-                            curr_c += 1
-                        else:
-                            for d in xrange(max([3, self.train['neg']]) + 1):
-                                if d == 0:
-                                    target = word
-                                    label = 1
-                                else:
-                                    target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
-                                    if target ==  word: continue
-                                    label = 0
-                                
-                                l2 = target
-                                f = 0
-                                f = 1. /(1. + np.exp(np.dot(self.get_vocab(last_word), self.train['syn1'][l2])))
-                                g = (label - f)
-                                grad_sum += abs(g)
-                                gc += 1
+                        curr_sum += grad_sum / gc
+                        curr_c += 1
+                    else:
+                        for d in xrange(max([3, self.train['neg']]) + 1):
+                            if d == 0:
+                                target = word
+                                label = 1
+                            else:
+                                target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                if target ==  word: continue
+                                label = 0
                             
-                            curr_sum += grad_sum / gc
-                            curr_c += 1
+                            l2 = target
+                            f = 0
+                            f = 1. /(1. + np.exp(np.dot(self.get_vocab(last_word), self.train['syn1'][l2])))
+                            g = (label - f)
+                            grad_sum += abs(g)
+                            gc += 1
+                        
+                        curr_sum += grad_sum / gc
+                        curr_c += 1
 
-                if curr_c > 0: sum_error += curr_sum / curr_c
-                sentence_position += 1
-                alpha -= step_size
-                if sentence_position >= sentence_len:
-                    break
+            if curr_c > 0: sum_error += curr_sum / curr_c
+            sentence_position += 1
+            alpha -= step_size
+            if sentence_position >= sentence_len:
+                break
 
         return sum_error / sentence_len
     
