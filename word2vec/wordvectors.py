@@ -52,8 +52,125 @@ class WordVectors(object):
         self.index_map = {}
         for idx, word in enumerate(vocab):
             self.index_map[word] = idx
+
+    def evaluateSentence(self, sentence):
+        if not self.train: return none
+        
+        word_list = sentence.split() #prune for valid words
+        layer1_size = self.train['layer1_size']
+        window = self.train['window']
+        sentence_position = 0
+        sentence_len = len(word_list)
+        word = word_list[sentence_position]
+        sentence_position = 0
+        sum_error = 0
+        while True:
+            word = word_list[sentence_position]
+            if word not in self: continue
+            neu1 = np.zeros(layer1_size)
+            neu1e = np.zeros(layer1_size)
+            b = window
+            curr_sum = 0
+            curr_c = 0
+            if self.train['cbow']:
+                cw = 0
+                for a in xrange(0, window * 1 + 1):
+                    c = sentence_position - window + a
+                    if c < 0: continue
+                    if c >= sentence_len: continue
+                    curr_word = word_list[c]
+                    if curr_word not in self: continue
+                    neu1 += self.get_vector(curr_word)
+                    cw += 1
+
+                if cw:
+                    neu1 /= cw
+                    grad_sum = 0
+                    gc = 0
+                    if self.train['hs']:
+                        cw = 0
+                        for d in xrange(self.train["vocab"][word]["codelen"]):
+                            f = 0
+                            l2 = self.train["vocab"][word]["point"][d]
+                            f = 1. (1 + exp(np.dot(neu1, self.train['syn1'][l2])))
+                            g = (1 - self.train['vocab'][word]['code'][d] - f)
+                            grad_sum += abs(g)
+                            gc += 1
+
+                        curr_sum += grad_sum / gc
+                        curr_c += 1
+                    else:
+                        for d in xrange(max([3, self.train['neg']]) + 1):
+                            if d == 0:
+                                target = word
+                                label = 1
+                            else:
+                                target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                if target ==  word: continue
+                                label = 0
+                            
+                            l2 = target
+                            f = 0
+                            f = np.dot(neu1, self.train["syn1"][l2])
+                            g = (label - 1. / (1 + np.exp(f)))
+                            grad_sum += abs(g)
+                            gc += 1
+
+                        curr_sum += grad_sum / gc
+                        curr_c += 1
+                else:
+                    for a in xrange(0, window * 2 + 1):
+                        c = sentence_position - window + a
+                        if (a >= window * 2 + 1 - b): c =0
+                        if c < 0: continue
+                        if c >= sentence_len: continue
+                        last_word =  word_list[c]
+                        l1 = last_word 
+                        neu1e = np.zeros(layer1_size)
+                        grad_sum = 0
+                        gc = 0
+                        if self.train['hs']:
+                            for d in xrange(self.train['vocab'][word]['codelen']):
+                                f = 0
+                                l2 = self.train['vocab'][word]['point'][d]
+                                f += 1. / (1 - np.exp( np.dot(self.get_vector(last_word), self.train['syn1'][l2])))
+                                g = (1 - self.train['vocab'][word]['code'][d] - f)
+                                grad_sum += abs(g)
+                                gc += 1
+
+                            curr_sum += grad_sum / gc
+                            curr_c += 1
+                        else:
+                            for d in xrange(max([3, self.train['neg']]) + 1):
+                                if d == 0:
+                                    target = word
+                                    label = 1
+                                else:
+                                    target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                    if target ==  word: continue
+                                    label = 0
+                                
+                                l2 = target
+                                f = 0
+                                f = 1. /(1. + np.exp(np.dot(self.get_vocab(last_word), self.train['syn1'][l2])))
+                                g = (label - f)
+                                grad_sum += abs(g)
+                                gc += 1
+                            
+                            curr_sum += grad_sum / gc
+                            curr_c += 1
+
+                if curr_c > 0: sum_error += curr_sum / curr_c
+                sentence_position += 1
+                alpha -= step_size
+                if sentence_position >= sentence_len:
+                    break
+
+        return sum_error / sentence_len
     
     def trainSentence(self, sentence, epochs=50, alpha=0.05):
+        if not self.train: return none
+
         word_list = sentence.split() #prune for valid words
         layer1_size = self.train['layer1_size']
         window = self.train['window']
@@ -66,6 +183,7 @@ class WordVectors(object):
             sentence_position = 0
             while True:
                 word = word_list[sentence_position]
+                if word not in self: continue
                 neu1 = np.zeros(layer1_size)
                 neu1e = np.zeros(layer1_size)
                 b = np.random.randint(0, window)
@@ -76,6 +194,7 @@ class WordVectors(object):
                         if c < 0: continue
                         if c >= sentence_len: continue
                         curr_word = word_list[c]
+                        if curr_word not in self: continue
                         neu1 += self.get_vector(curr_word)
                         cw += 1
                     
@@ -88,7 +207,7 @@ class WordVectors(object):
                                 f = 0
                                 l2 = self.train["vocab"][word]["point"][d]
                                 f = 1. / (1 + exp(np.clip(np.dot(neu1, self.train['syn1'][l2]),-3., 3.)))
-                                g = (1 - self.train['vocab'][word]['code'][d]) * alpha
+                                g = (1 - self.train['vocab'][word]['code'][d] - f) * alpha
                                 neu1e += g * self.train['syn1'][l2]
                         else:
                             for d in xrange(max([3, self.train['neg']]) + 1):
