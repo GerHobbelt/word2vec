@@ -262,7 +262,7 @@ class WordVectors(object):
                                 l2 = target
                                 f = 0
                                 #f = 1. /(1. + np.exp(np.dot(self.get_vocab(last_word), self.train['syn1'][l2])))
-                                f = 1. /(1. + np.exp(np.clip(np.dot(newvec, self.train['syn1'][l2])), -3., 3.))
+                                f = 1. /(1. + np.exp(np.clip(np.dot(newvec, self.train['syn1'][l2]), -3., 3.)))
                                 g = (label - f) * alpha
                                 neu1e += g * self.train['syn1'][l2]
                             
