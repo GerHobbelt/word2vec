@@ -182,7 +182,12 @@ class WordVectors(object):
             sentence_position = 0
             while True:
                 word = word_list[sentence_position]
-                if word not in self: continue
+                if word not in self: 
+                    sentence_position += 1
+                    alpha -= step_size
+                    if sentence_position >= sentence_len:
+                        break
+                    continue
                 neu1 = np.zeros(layer1_size)
                 neu1e = np.zeros(layer1_size)
                 b = np.random.randint(0, window)
