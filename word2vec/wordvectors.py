@@ -152,7 +152,7 @@ class WordVectors(object):
                             
                             l2 = target
                             f = 0
-                            f = 1. /(1. + np.exp(np.dot(self.get_vocab(last_word), self.train['syn1'][l2])))
+                            f = 1. /(1. + np.exp(np.dot(self.get_vector(last_word), self.train['syn1'][l2])))
                             g = (label - f)
                             grad_sum += abs(g)
                             gc += 1
@@ -162,7 +162,6 @@ class WordVectors(object):
 
             if curr_c > 0: sum_error += curr_sum / curr_c
             sentence_position += 1
-            alpha -= step_size
             if sentence_position >= sentence_len:
                 break
 
@@ -387,7 +386,7 @@ class WordVectors(object):
         joblib.dump(self, fname)
     
     @staticmethod
-    def read_hidden_layer(fname):
+    def read_hidden_layer(fname, kind='bin'):
         """
         Read hidden layers
         """
@@ -454,7 +453,7 @@ class WordVectors(object):
         -------
         WordVectors instance
         """
-        train = cls.read_hidden_layer(fname)
+        train = cls.read_hidden_layer(fname, "bin")
         with open(fname, 'rb') as fin:
             header = fin.readline()
             vocab_size, vector_size = list(map(int, header.split()))
@@ -483,7 +482,6 @@ class WordVectors(object):
             if desired_vocab is not None:
                 vectors = vectors[vocab != '', :]
                 vocab = vocab[vocab != '']
-        # train = cls.read_hidden_layer(fname)
         return cls(vocab=vocab, vectors=vectors, train=train)
 
     @classmethod
