@@ -169,7 +169,8 @@ class WordVectors(object):
     
     def trainSentence(self, sentence, epochs=50, alpha=0.05):
         if not self.train: return none
-
+        
+        np.random.seed(42)
         word_list = sentence.split() #prune for valid words
         layer1_size = self.train['layer1_size']
         window = self.train['window']
@@ -391,9 +392,75 @@ class WordVectors(object):
         joblib.dump(self, fname)
     
     @staticmethod
-    def read_hidden_layer(fname, kind='bin'):
+    def read_hidden_layer(fname, kind='text'):
+        if kind=='text':
+            return read_hidden_layer_text(fname)
+
+
+    @staticmethod
+    def read_hidden_layer_bin(fname):
         """
-        Read hidden layers
+        read hidden layers - binary
+        """
+        fsyn1 = fname + ".syn1"
+
+        if not os.path.isfile(fsyn1):
+            return None
+        
+        model = {}
+        with open(fsyn1, 'r') as f:
+            header = f.readline()
+            tokens = header.strip().split()
+            for idx in xrange(0, len(tokens), 2):
+                model[tokens[idx]] = int(tokens[idx+1])
+
+            syn1 = {}
+            for i, line in enumerate(f):
+                idx = line.index(" ")
+                key = line[0:idx]
+                val = line[idx+1:]
+                vector = np.fromstring(val, dtype=np.float)
+                syn1[key] = vector
+
+            model['syn1'] = syn1
+
+        if model['hs']:
+            fvocab = fname + ".vocab"
+            if not os.path.isfile(fvocab):
+                return None
+            vocab = {}
+            with open(fvocab, 'r') as f:
+                for line in f:
+                    tokens  = line.strip().split(' ')
+                    ventry = {}
+                    ventry['word'] = tokens[0]
+                    ventry['codelen'] = int(tokens[1])
+                    point = []
+                    code = []
+                    idx = line.index(" ")
+                    line = line[idx+1:]
+                    idx = line.index(" ")
+
+                    vector = np.fromstring(line[idx+1:], dtype=np.int)
+
+                    for idx in xrange(ventry['codelen']):
+                        point.append(str(vector[idx]))
+                    for idx in xrange(ventry['codelen']):
+                        code.append(int(vector[idx + ventry['codelen']]))
+
+                    ventry['point'] = point
+                    ventry['code'] = code
+                    vocab[ventry['word']] = ventry
+
+            model['vocab'] = vocab
+        else:
+            model['vocab'] = None
+
+
+    @staticmethod
+    def read_hidden_layer_text(fname):
+        """
+        Read hidden layers - text
         """
         fsyn1 = fname + ".syn1"
         if not os.path.isfile(fsyn1):
@@ -403,7 +470,7 @@ class WordVectors(object):
         with open(fsyn1, 'r') as f:
             header = f.readline()
             tokens = header.strip().split()
-            for idx in range(0, len(tokens), 2):
+            for idx in xrange(0, len(tokens), 2):
                 model[tokens[idx]] = int(tokens[idx+1])
             
             syn1 = {}

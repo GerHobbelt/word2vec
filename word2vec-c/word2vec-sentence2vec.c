@@ -598,9 +598,15 @@ void TrainModel() {
         long long  n = sizeof(syn1); // / (sizeof(real) * layer1_size);
         fprintf(fsyn1, "syn1_size %lld\n", vocab_size);
         for (a = 0; a < vocab_size; a++) {
-            fprintf(fsyn1, "%ld ", a);
-            for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1[a * layer1_size + b]);
-            fprintf(fsyn1, "\n");
+            if (!binary) {
+                fprintf(fsyn1, "%ld ", a);
+                for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1[a * layer1_size + b]);
+                fprintf(fsyn1, "\n");
+            } else {
+                fwrite(&a, sizeof(long), 1, fsyn1);
+                for (b = 0; b < layer1_size; b++) fwrite(&syn1[a * layer1_size + b], sizeof(real), 1, fsyn1);
+                fprintf(fsyn1, "\n");
+            }
         }
         fclose(fsyn1);
 
@@ -610,19 +616,32 @@ void TrainModel() {
         strcat(output_vocab, ".vocab");
         fvocab = fopen(output_vocab, "wb");
         for (a = 0; a < vocab_size; a++){
-            fprintf(fvocab, "%s %d ", vocab[a].word, vocab[a].codelen);
-            for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].point[b]);
-            for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].code[b]);
-            fprintf(fvocab, "\n");
+            if (!binary) {
+                fprintf(fvocab, "%s %d ", vocab[a].word, vocab[a].codelen);
+                for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].point[b]);
+                for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].code[b]);
+                fprintf(fvocab, "\n");
+            } else {
+                fwrite(vocab[a].word, sizeof(char), sizeof(vocab[a].word), fvocab);
+                for (b = 0; b < vocab[a].codelen; b++) fwrite(vocab[a].point[b], size(int), 1, fvocab);
+                for (b = 0; b < vocab[a].codelen; b++) fwrite(vocab[a].code[b], size(int), 1, fvocab);
+                fprintf(fvocab, "\n");
+            }
         }
         fclose(fvocab);
 
     } else {
         fprintf(fsyn1, "syn1_size %lld\n", vocab_size);
         for (a = 0; a < vocab_size; a++){
-            fprintf(fsyn1, "%s ", vocab[a].word);
-            for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1neg[a * layer1_size + b]);
-            fprintf(fsyn1, "\n");
+            if (!binary) {
+                fprintf(fsyn1, "%ld ", a);
+                for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1[a * layer1_size + b]);
+                fprintf(fsyn1, "\n");
+            } else {
+                fwrite(&a, sizeof(long), 1, fsyn1);
+                for (b = 0; b < layer1_size; b++) fwrite(&syn1[a * layer1_size + b], sizeof(real), 1, fsyn1);
+                fprintf(fsyn1, "\n");
+            }
         }
         fclose(fsyn1);
     }
