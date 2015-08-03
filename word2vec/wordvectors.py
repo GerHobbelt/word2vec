@@ -32,6 +32,8 @@ class WordVectors(object):
         self.clusters = clusters
         self._buildIndexMap(vocab)
         self.train = train
+        self.hidden_words = None
+        self.hword_len = 0
 
     def ix(self, word):
         """
@@ -146,7 +148,8 @@ class WordVectors(object):
                                 target = word
                                 label = 1
                             else:
-                                target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                #target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                target = self.hidden_words[np.random.randint(0, len(self.hword_len))]
                                 if target ==  word: continue
                                 label = 0
                             
@@ -220,11 +223,12 @@ class WordVectors(object):
                                     target = word
                                     label = 1
                                 else:
-                                    target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                    #target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                    target = self.hidden_words[np.random.randint(0, len(self.hword_len))]
                                     if target ==  word: continue
                                     label = 0
                                 
-                                l2 = target #self.ix[target]
+                                l2 = target
                                 f = 0
                                 f = np.clip(np.dot(neu1, self.train["syn1"][l2]),-3., 3.)
                                 g = (label - 1. / (1 + np.exp(f))) * alpha
@@ -256,7 +260,8 @@ class WordVectors(object):
                                     target = word
                                     label = 1
                                 else:
-                                    target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                    #target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                    target = self.hidden_words[np.random.randint(0, len(self.hword_len))]
                                     if target ==  word: continue
                                     label = 0
                                 
@@ -403,7 +408,7 @@ class WordVectors(object):
         read hidden layers - binary
         """
         fsyn1 = fname + ".syn1"
-
+        self.hidden_words = []
         if not os.path.isfile(fsyn1):
             return None
         
@@ -421,9 +426,13 @@ class WordVectors(object):
                 val = line[idx+1:]
                 vector = np.fromstring(val, dtype=np.float)
                 syn1[key] = vector
+                if "_*" not in key:
+                    self.hidden_words.append(key)
+                    
 
             model['syn1'] = syn1
-
+        
+        self.hword_len = len(self.hidden_words)
         if model['hs']:
             fvocab = fname + ".vocab"
             if not os.path.isfile(fvocab):
@@ -463,6 +472,7 @@ class WordVectors(object):
         Read hidden layers - text
         """
         fsyn1 = fname + ".syn1"
+        self.hidden_words = []
         if not os.path.isfile(fsyn1):
             return None
 
@@ -479,9 +489,12 @@ class WordVectors(object):
                 key =  tokens[0]
                 vector = np.array(tokens[1:], dtype=np.float)
                 syn1[key] = vector
+                if "_*" not in key:
+                    self.hidden_words.append(key)
 
             model['syn1'] = syn1
             
+        self.hword_len = len(self.hidden_words)
         if model['hs']:
             fvocab = fname + ".vocab"
             if not os.path.isfile(fvocab):
