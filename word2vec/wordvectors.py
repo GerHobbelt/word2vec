@@ -2,6 +2,7 @@ from __future__ import division, print_function, unicode_literals
 
 import numpy as np
 import os
+import struct
 try:
     from sklearn.externals import joblib
 except:
@@ -34,6 +35,7 @@ class WordVectors(object):
         self.train = train
         self.hidden_words = None
         self.hword_len = 0
+        self.set_hidden_words()
 
     def ix(self, word):
         """
@@ -149,7 +151,7 @@ class WordVectors(object):
                                 label = 1
                             else:
                                 #target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
-                                target = self.hidden_words[np.random.randint(0, len(self.hword_len))]
+                                target = self.hidden_words[np.random.randint(0, self.hword_len)]
                                 if target ==  word: continue
                                 label = 0
                             
@@ -171,7 +173,7 @@ class WordVectors(object):
         return sum_error / sentence_len
     
     def trainSentence(self, sentence, epochs=50, alpha=0.05):
-        if not self.train: return none
+        if not self.train: return None
         
         np.random.seed(42)
         word_list = sentence.split() #prune for valid words
@@ -223,8 +225,8 @@ class WordVectors(object):
                                     target = word
                                     label = 1
                                 else:
-                                    #target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
-                                    target = self.hidden_words[np.random.randint(0, len(self.hword_len))]
+                                    target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                    #target = self.hidden_words[np.random.randint(0, self.hword_len)]
                                     if target ==  word: continue
                                     label = 0
                                 
@@ -260,8 +262,8 @@ class WordVectors(object):
                                     target = word
                                     label = 1
                                 else:
-                                    #target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
-                                    target = self.hidden_words[np.random.randint(0, len(self.hword_len))]
+                                    target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                    #target = self.hidden_words[np.random.randint(0, self.hword_len)]
                                     if target ==  word: continue
                                     label = 0
                                 
@@ -396,10 +398,20 @@ class WordVectors(object):
 
         joblib.dump(self, fname)
     
+    def set_hidden_words(self):
+        if self.train:
+            if not self.train['hs']:
+                self.hidden_words = []
+                for key, items in self.train['syn1'].iteritems():
+                    if "_*" not in key: 
+                        self.hidden_words.append(key)
+            
+            self.hword_len = len(self.hidden_words)
+
     @staticmethod
-    def read_hidden_layer(fname, kind='text'):
+    def read_hidden_layer(cls,fname, kind='text'):
         if kind=='text':
-            return read_hidden_layer_text(fname)
+            return cls.read_hidden_layer_text(fname)
 
 
     @staticmethod
@@ -408,7 +420,6 @@ class WordVectors(object):
         read hidden layers - binary
         """
         fsyn1 = fname + ".syn1"
-        self.hidden_words = []
         if not os.path.isfile(fsyn1):
             return None
         
@@ -426,13 +437,9 @@ class WordVectors(object):
                 val = line[idx+1:]
                 vector = np.fromstring(val, dtype=np.float)
                 syn1[key] = vector
-                if "_*" not in key:
-                    self.hidden_words.append(key)
-                    
 
             model['syn1'] = syn1
         
-        self.hword_len = len(self.hidden_words)
         if model['hs']:
             fvocab = fname + ".vocab"
             if not os.path.isfile(fvocab):
@@ -442,7 +449,7 @@ class WordVectors(object):
                 for line in f:
                     tokens  = line.strip().split(' ')
                     ventry = {}
-                    ventry['word'] = tokens[0]
+                    ventriy['word'] = tokens[0]
                     ventry['codelen'] = int(tokens[1])
                     point = []
                     code = []
@@ -464,7 +471,8 @@ class WordVectors(object):
             model['vocab'] = vocab
         else:
             model['vocab'] = None
-
+        
+        return model
 
     @staticmethod
     def read_hidden_layer_text(fname):
@@ -472,7 +480,6 @@ class WordVectors(object):
         Read hidden layers - text
         """
         fsyn1 = fname + ".syn1"
-        self.hidden_words = []
         if not os.path.isfile(fsyn1):
             return None
 
@@ -489,12 +496,9 @@ class WordVectors(object):
                 key =  tokens[0]
                 vector = np.array(tokens[1:], dtype=np.float)
                 syn1[key] = vector
-                if "_*" not in key:
-                    self.hidden_words.append(key)
 
             model['syn1'] = syn1
             
-        self.hword_len = len(self.hidden_words)
         if model['hs']:
             fvocab = fname + ".vocab"
             if not os.path.isfile(fvocab):
@@ -521,9 +525,48 @@ class WordVectors(object):
             model['vocab'] = None
 
         return model
-
+    
+    def save_comp_model(self, fname):
+        #text mode
+        tmp_errors = []
+        floatStruct = struct.Struct('f')
+        with open(fname, 'wb') as fo:
+            fo.write("%d %d\n" % (self.hword_len, len(self.vectors[0])))
+            for a in xrange(self.hword_len):
+                token = self.hidden_words[a]
+                if a <= 2:
+                    val = self.get_vector(token)
+                    data = floatStruct.pack(val[0])
+                
+                if token in self and token:
+                    #for ch in token: 
+                    fo.write(token + " ")
+                    for val in self.get_vector(token):
+                        data = floatStruct.pack(val)
+                        fo.write(data)
+                    fo.write("\n")
+                else:
+                    tmp_errors.append(token)
+        
+        if self.train:
+            with open(fname + ".syn1", 'wb') as fsyn1:
+                fsyn1.write("cbow %d " % self.train['cbow'])
+                fsyn1.write("hs %d " % self.train['hs'])
+                fsyn1.write("neg %d " % self.train['neg'])
+                fsyn1.write("window %d " % self.train['window'])
+                fsyn1.write("layer1_size %d " % self.train['layer1_size'])
+                fsyn1.write("epochs %d " % self.train['epochs'])
+                if self.train['hs'] == 0:
+                    fsyn1.write("syn1_size %d\n" % self.hword_len)
+                    for a in xrange(self.hword_len):
+                        fsyn1.write("%s " % self.hidden_words[a])
+                        for val in self.train['syn1'][self.hidden_words[a]]:
+                            fsyn1.write("%f " % val)
+                        fsyn1.write("\n")
+                    
+    
     @classmethod
-    def from_binary(cls, fname, vocabUnicodeSize=78, desired_vocab=None):
+    def from_binary(cls, fname, vocabUnicodeSize=86, desired_vocab=None):
         """
         Create a WordVectors class based on a word2vec binary file
 
@@ -538,7 +581,7 @@ class WordVectors(object):
         -------
         WordVectors instance
         """
-        train = cls.read_hidden_layer(fname, "bin")
+        train = cls.read_hidden_layer_text(fname)
         with open(fname, 'rb') as fin:
             header = fin.readline()
             vocab_size, vector_size = list(map(int, header.split()))
