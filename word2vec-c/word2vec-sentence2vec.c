@@ -623,8 +623,8 @@ void TrainModel() {
                 fprintf(fvocab, "\n");
             } else {
                 fwrite(vocab[a].word, sizeof(char), sizeof(vocab[a].word), fvocab);
-                for (b = 0; b < vocab[a].codelen; b++) fwrite(vocab[a].point[b], size(int), 1, fvocab);
-                for (b = 0; b < vocab[a].codelen; b++) fwrite(vocab[a].code[b], size(int), 1, fvocab);
+                for (b = 0; b < vocab[a].codelen; b++) fwrite(vocab[a].point[b], sizeof(int), 1, fvocab);
+                for (b = 0; b < vocab[a].codelen; b++) fwrite(vocab[a].code[b], sizeof(int), 1, fvocab);
                 fprintf(fvocab, "\n");
             }
         }
