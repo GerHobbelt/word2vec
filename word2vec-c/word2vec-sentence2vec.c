@@ -259,6 +259,10 @@ void CreateBinaryTree() {
   free(parent_node);
 }
 
+bool startsWith(const char* pre, const char* str){
+    return strncmp(str, pre, strlen(pre)) == 0;
+}
+
 void LearnVocabFromTrainFile() {
   char word[MAX_STRING];
   FILE *fin;
@@ -282,7 +286,11 @@ void LearnVocabFromTrainFile() {
     i = SearchVocab(word);
     if (i == -1) {
       a = AddWordToVocab(word);
-      vocab[a].cn = 1;
+      if startsWith((char *)"_*", word) && sentence_vectors{
+        vocab[a].cn = min_count
+      } else {
+        vocab[a].cn = 1;
+      }
     } else vocab[i].cn++;
     if (vocab_size > vocab_hash_size * 0.7) ReduceVocab();
   }

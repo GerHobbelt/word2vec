@@ -68,9 +68,11 @@ class WordVectors(object):
         word = word_list[sentence_position]
         sentence_position = 0
         sum_error = 0
-        while True:
+        for sentence_position in xrange(sentence_len):
             word = word_list[sentence_position]
-            if word not in self: continue
+            if word not in self:
+                continue
+            
             neu1 = np.zeros(layer1_size)
             neu1e = np.zeros(layer1_size)
             b = window
@@ -166,10 +168,7 @@ class WordVectors(object):
                         curr_c += 1
 
             if curr_c > 0: sum_error += curr_sum / curr_c
-            sentence_position += 1
-            if sentence_position >= sentence_len:
-                break
-
+        
         return sum_error / sentence_len
     
     def trainSentence(self, sentence, epochs=50, alpha=0.05):
@@ -186,7 +185,7 @@ class WordVectors(object):
         step_size = (alpha - min(0.0001, alpha)) / (sentence_len * epochs)
         for epoch in xrange(epochs):
             sentence_position = 0
-            while True:
+            for sentence_position in xrange(sentence_len):
                 word = word_list[sentence_position]
                 if word not in self: 
                     sentence_position += 1
