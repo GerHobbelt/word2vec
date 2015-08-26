@@ -152,8 +152,8 @@ class WordVectors(object):
                                 target = word
                                 label = 1
                             else:
-                                #target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
-                                target = self.hidden_words[np.random.randint(0, self.hword_len)]
+                                target = self.vocab[np.random.randint(0, self.train['syn1_size'])]
+                                #target = self.hidden_words[np.random.randint(0, self.hword_len)]
                                 if target ==  word: continue
                                 label = 0
                             

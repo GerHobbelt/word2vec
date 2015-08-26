@@ -131,9 +131,10 @@ def doc2vec(train, output, size=100, window=5, sample='1e-3', hs=0, negative=5,
         command.append('-read-vocab')
         command.append(str(read_vocab))
 
-    command.append('sentence-vectors')
+    command.append('-sentence-vectors')
     command.append('1')
-
+    
+    print(command)
     run_cmd(command, verbose=verbose)
 
 

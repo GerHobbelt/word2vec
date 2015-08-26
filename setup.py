@@ -1,3 +1,4 @@
+from setuptools import setup   
 import os
 import sys
 import subprocess
@@ -50,6 +51,10 @@ setup(
     packages=['word2vec'],
     description=DESCRIPTION,
     license='Apache License Version 2.0, January 2004',
+    scripts = [
+        'bin/word2vec',
+        'bin/word2vec-doc2vec'
+    ],
     data_files=[('bin', ['bin/word2vec', 'bin/word2phrase',
                          'bin/word2vec-distance', 'bin/word2vec-word-analogy',
                          'bin/word2vec-compute-accuracy',

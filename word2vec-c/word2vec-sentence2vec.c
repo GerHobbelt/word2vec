@@ -109,12 +109,22 @@ int SearchVocab(char *word) {
   return -1;
 }
 
+int SearchVocabRareWords(char *word) {
+  unsigned int hash = GetWordHash(word);
+  while (1) {
+    if (vocab_hash[hash] == -1) return vocab_size - 1;
+    if (!strcmp(word, vocab[vocab_hash[hash]].word)) return vocab_hash[hash];
+    hash = (hash + 1) % vocab_hash_size;
+  }
+  return vocab_size - 1;
+}
+
 // Reads a word and returns its index in the vocabulary
 int ReadWordIndex(FILE *fin) {
   char word[MAX_STRING];
   ReadWord(word, fin);
   if (feof(fin)) return -1;
-  return SearchVocab(word);
+  return SearchVocabRareWords(word);
 }
 
 // Adds a word to the vocabulary
@@ -136,11 +146,20 @@ int AddWordToVocab(char *word) {
   return vocab_size - 1;
 }
 
+
 // Used later for sorting by word counts
 int VocabCompare(const void *a, const void *b) {
-    return ((struct vocab_word *)b)->cn - ((struct vocab_word *)a)->cn;
+    int cmp, cmpA, cmpB;
+    cmp = ((struct vocab_word *)b)->cn - ((struct vocab_word *)a)->cn;
+    cmpA = StartsWith((char *)"_*", ((struct vocab_word *)a)->word);
+    cmpB = StartsWith((char *)"_*", ((struct vocab_word *)b)->word);
+    if (((struct vocab_word *)b)->cn < min_count && ((struct vocab_word *)a)->cn < min_count ){
+        if (sentence_vectors){
+            return cmpB - cmpA;
+        }   
+    }   
+    return cmp;
 }
-
 // Sorts the vocabulary by frequency using word counts
 void SortVocab() {
   int a, size;
@@ -152,7 +171,7 @@ void SortVocab() {
   train_words = 0;
   for (a = 0; a < size; a++) {
     // Words occuring less than min_count times will be discarded from the vocab
-    if (vocab[a].cn < min_count) {
+    if (vocab[a].cn < min_count && !(StartsWith((char *)"_*", vocab[a].word) && sentence_vectors)) {
       vocab_size--;
       free(vocab[vocab_size].word);
     } else {
@@ -163,7 +182,9 @@ void SortVocab() {
       train_words += vocab[a].cn;
     }
   }
-  vocab = (struct vocab_word *)realloc(vocab, (vocab_size + 1) * sizeof(struct vocab_word));
+  a = AddWordToVocab((char *)"<UNKNOWN>");
+  vocab[a].cn = 1;
+  //vocab = (struct vocab_word *)realloc(vocab, (vocab_size + 1) * sizeof(struct vocab_word));
   // Allocate memory for the binary tree construction
   for (a = 0; a < vocab_size; a++) {
     vocab[a].code = (char *)calloc(MAX_CODE_LENGTH, sizeof(char));
@@ -175,7 +196,7 @@ void SortVocab() {
 void ReduceVocab() {
   int a, b = 0;
   unsigned int hash;
-  for (a = 0; a < vocab_size; a++) if (vocab[a].cn > min_reduce) {
+  for (a = 0; a < vocab_size; a++) if (vocab[a].cn > min_reduce || (StartsWith((char *)"_*", vocab[a].word) && sentence_vectors)) {
     vocab[b].cn = vocab[a].cn;
     vocab[b].word = vocab[a].word;
     b++;
@@ -259,7 +280,7 @@ void CreateBinaryTree() {
   free(parent_node);
 }
 
-bool startsWith(const char* pre, const char* str){
+int StartsWith(const char* pre, const char* str){
     return strncmp(str, pre, strlen(pre)) == 0;
 }
 
@@ -286,11 +307,7 @@ void LearnVocabFromTrainFile() {
     i = SearchVocab(word);
     if (i == -1) {
       a = AddWordToVocab(word);
-      if startsWith((char *)"_*", word) && sentence_vectors{
-        vocab[a].cn = min_count
-      } else {
-        vocab[a].cn = 1;
-      }
+      vocab[a].cn = 1;
     } else vocab[i].cn++;
     if (vocab_size > vocab_hash_size * 0.7) ReduceVocab();
   }
@@ -592,7 +609,8 @@ void TrainModel() {
     char output_syn1[MAX_STRING + 4];
     strcpy(output_syn1, output_file);
     strcat(output_syn1, ".syn1");
-    fsyn1 = fopen(output_syn1, "wb");
+    fsyn1 = fopen(output_syn1, "w+");
+    if (fsyn1 == NULL) printf("file not open\n");
     // Write continuous bag of words
     fprintf(fsyn1, "cbow %d ", cbow);
     fprintf(fsyn1, "hs %d ", hs);
@@ -606,15 +624,9 @@ void TrainModel() {
         long long  n = sizeof(syn1); // / (sizeof(real) * layer1_size);
         fprintf(fsyn1, "syn1_size %lld\n", vocab_size);
         for (a = 0; a < vocab_size; a++) {
-            if (!binary) {
-                fprintf(fsyn1, "%ld ", a);
-                for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1[a * layer1_size + b]);
-                fprintf(fsyn1, "\n");
-            } else {
-                fwrite(&a, sizeof(long), 1, fsyn1);
-                for (b = 0; b < layer1_size; b++) fwrite(&syn1[a * layer1_size + b], sizeof(real), 1, fsyn1);
-                fprintf(fsyn1, "\n");
-            }
+            fprintf(fsyn1, "%ld ", a);
+            for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1[a * layer1_size + b]);
+            fprintf(fsyn1, "\n");
         }
         fclose(fsyn1);
 
@@ -624,32 +636,19 @@ void TrainModel() {
         strcat(output_vocab, ".vocab");
         fvocab = fopen(output_vocab, "wb");
         for (a = 0; a < vocab_size; a++){
-            if (!binary) {
-                fprintf(fvocab, "%s %d ", vocab[a].word, vocab[a].codelen);
-                for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].point[b]);
-                for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].code[b]);
-                fprintf(fvocab, "\n");
-            } else {
-                fwrite(vocab[a].word, sizeof(char), sizeof(vocab[a].word), fvocab);
-                for (b = 0; b < vocab[a].codelen; b++) fwrite(vocab[a].point[b], sizeof(int), 1, fvocab);
-                for (b = 0; b < vocab[a].codelen; b++) fwrite(vocab[a].code[b], sizeof(int), 1, fvocab);
-                fprintf(fvocab, "\n");
-            }
+            fprintf(fvocab, "%s %d ", vocab[a].word, vocab[a].codelen);
+            for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].point[b]);
+            for (b = 0; b < vocab[a].codelen; b++) fprintf(fvocab, "%d ", vocab[a].code[b]);
+            fprintf(fvocab, "\n");
         }
         fclose(fvocab);
 
     } else {
         fprintf(fsyn1, "syn1_size %lld\n", vocab_size);
         for (a = 0; a < vocab_size; a++){
-            if (!binary) {
-                fprintf(fsyn1, "%ld ", a);
-                for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1[a * layer1_size + b]);
-                fprintf(fsyn1, "\n");
-            } else {
-                fwrite(&a, sizeof(long), 1, fsyn1);
-                for (b = 0; b < layer1_size; b++) fwrite(&syn1[a * layer1_size + b], sizeof(real), 1, fsyn1);
-                fprintf(fsyn1, "\n");
-            }
+            fprintf(fsyn1, "%s ", vocab[a].word);
+            for (b = 0; b < layer1_size; b++) fprintf(fsyn1, "%lf ", syn1neg[a * layer1_size + b]);
+            fprintf(fsyn1, "\n");
         }
         fclose(fsyn1);
     }
