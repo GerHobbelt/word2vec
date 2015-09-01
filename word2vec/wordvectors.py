@@ -3,6 +3,7 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 import os
 import struct
+import random
 try:
     from sklearn.externals import joblib
 except:
@@ -524,15 +525,27 @@ class WordVectors(object):
             model['vocab'] = None
 
         return model
-    
-    def save_comp_model(self, fname):
+   
+    def set_compress_words(self, cthresh=0.1):
+        compress_words = []
+        if self.train:
+            if not self.train['hs']:
+                for key, items in self.train['syn1'].iteritems():
+                    if "_*" not in key or random.random() < cthresh: 
+                        compress_words.append(key)
+            
+        return compress_words
+
+    def compress_model(self, fname, cthresh=0.1):
         #text mode
         tmp_errors = []
         floatStruct = struct.Struct('f')
+        compress_words = self.set_compress_words(cthresh)
+        clen = len(compress_words)
         with open(fname, 'wb') as fo:
-            fo.write("%d %d\n" % (self.hword_len, len(self.vectors[0])))
-            for a in xrange(self.hword_len):
-                token = self.hidden_words[a]
+            fo.write("%d %d\n" % (clen, len(self.vectors[0])))
+            for a in xrange(clen):
+                token = compress_words[a]
                 if a <= 2:
                     val = self.get_vector(token)
                     data = floatStruct.pack(val[0])
@@ -556,10 +569,10 @@ class WordVectors(object):
                 fsyn1.write("layer1_size %d " % self.train['layer1_size'])
                 fsyn1.write("epochs %d " % self.train['epochs'])
                 if self.train['hs'] == 0:
-                    fsyn1.write("syn1_size %d\n" % self.hword_len)
-                    for a in xrange(self.hword_len):
-                        fsyn1.write("%s " % self.hidden_words[a])
-                        for val in self.train['syn1'][self.hidden_words[a]]:
+                    fsyn1.write("syn1_size %d\n" % clen)
+                    for a in xrange(clen):
+                        fsyn1.write("%s " % compress_words[a])
+                        for val in self.train['syn1'][compress_words[a]]:
                             fsyn1.write("%f " % val)
                         fsyn1.write("\n")
                     
