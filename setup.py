@@ -60,6 +60,6 @@ setup(
                          'bin/word2vec-compute-accuracy',
                          'bin/word2vec-doc2vec'])],
     install_requires=[
-        'numpy>=1.9.2'
+        'numpy>=1.8.0'
     ],
 )
