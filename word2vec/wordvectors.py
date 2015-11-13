@@ -408,7 +408,7 @@ class WordVectors(object):
             
             self.hword_len = len(self.hidden_words)
 
-    @staticmethod
+    @classmethod
     def read_hidden_layer(cls,fname, kind='text'):
         if kind=='text':
             return cls.read_hidden_layer_text(fname)
