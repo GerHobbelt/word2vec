@@ -1,4 +1,3 @@
-from setuptools import setup   
 """
 To upload a new version:
 1. make clean
@@ -16,6 +15,7 @@ So you have to export that to the `$PATH`
 
 """
 
+#from setuptools import setup   
 from distutils.core import setup
 from setuptools import find_packages
 
