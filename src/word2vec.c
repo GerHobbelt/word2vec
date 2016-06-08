@@ -601,24 +601,33 @@ void TrainModel() {
   } else {
     // Run K-means on the word vectors
     int clcn = classes, iter = 10, closeid;
+    // Count the number of points belonging to each center
     int *centcn = (int *)malloc(classes * sizeof(int));
     if (centcn == NULL) {
       fprintf(stderr, "cannot allocate memory for centcn\n");
       exit(1);
     }
+    // There are vocab_size words, initialize their classes
     int *cl = (int *)calloc(vocab_size, sizeof(int));
     real closev, x;
+    // Each word is represented as lay1_size dimension data, so the centers are classes * layer1_size
     real *cent = (real *)calloc(classes * layer1_size, sizeof(real));
+    // Initialize each vocabulary with a peudo-random class number
     for (a = 0; a < vocab_size; a++) cl[a] = a % clcn;
+    // Run iter times, to find the actual centers
     for (a = 0; a < iter; a++) {
+      // Initialize center to 0
       for (b = 0; b < clcn * layer1_size; b++) cent[b] = 0;
+      // Initialize number of points belonging to each enter as 1
       for (b = 0; b < clcn; b++) centcn[b] = 1;
+      // Adjust the centers (i.e. add up values in each dimension), based on class labels of the c-th word, and count the points in each class
       for (c = 0; c < vocab_size; c++) {
         for (d = 0; d < layer1_size; d++) {
           cent[layer1_size * cl[c] + d] += syn0[c * layer1_size + d];
           centcn[cl[c]]++;
         }
       }
+      // For each class, normalize the center (i.e. divide center by cluster size and compute ||v||, and divide center by ||v||)
       for (b = 0; b < clcn; b++) {
         closev = 0;
         for (c = 0; c < layer1_size; c++) {
@@ -628,9 +637,12 @@ void TrainModel() {
         closev = sqrt(closev);
         for (c = 0; c < layer1_size; c++) cent[layer1_size * b + c] /= closev;
       }
+      // For each word
       for (c = 0; c < vocab_size; c++) {
         closev = -10;
         closeid = 0;
+        // Find the closest class to this word
+        // TODO: modify the distance computation
         for (d = 0; d < clcn; d++) {
           x = 0;
           for (b = 0; b < layer1_size; b++) x += cent[layer1_size * d + b] * syn0[c * layer1_size + b];
@@ -639,6 +651,7 @@ void TrainModel() {
             closeid = d;
           }
         }
+        // update the class label for that word
         cl[c] = closeid;
       }
     }
@@ -652,6 +665,12 @@ void TrainModel() {
   free(table);
   free(pt);
   DestroyVocab();
+}
+
+int ProbDist() {
+}
+
+int EulaDist() {
 }
 
 int ArgPos(char *str, int argc, char **argv) {
